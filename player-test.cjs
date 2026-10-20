@@ -1,0 +1,11 @@
+const vm=require('node:vm'),fs=require('node:fs'),assert=require('node:assert/strict');
+const frame={style:{}},empty={},video={style:{},pause(){},load(){},removeAttribute(){},play(){return Promise.resolve();}},timers=[];
+let response={slides:[{id:1,html:'Hei',text:'<trygt>',background:'/media/bg/',fit:'contain',duration:5},{id:2,kind:'video',media:'/media/movie/',video_mode:'full',video_duration:12,duration:9}]};
+const context={location:{origin:'http://localhost:8088'},document:{querySelector:s=>s==='iframe'?frame:s==='#video'?video:empty,body:{dataset:{feed:'/api/test'}}},fetch:async()=>({ok:true,status:200,json:async()=>response}),AbortSignal,setTimeout:(f,ms)=>{let t={f,ms};timers.push(t);return t;},clearTimeout:t=>{if(t)t.cancelled=true;}};
+vm.runInNewContext(fs.readFileSync(__dirname+'/slides/static/slides/player.js','utf8'),context);
+const flush=()=>new Promise(resolve=>setImmediate(resolve));
+(async()=>{await flush();assert(frame.srcdoc.includes('Hei'));assert(frame.srcdoc.includes('&lt;trygt&gt;'));assert(frame.srcdoc.includes('object-fit:contain'));assert(frame.srcdoc.includes("img-src http://localhost:8088"));
+ timers.find(t=>t.ms===5000).f();assert.equal(video.src,'/media/movie/');assert.equal(video.loop,false);assert.equal(frame.style.display,'none');assert(timers.some(t=>t.ms===42000));video.onended();assert.equal(frame.style.display,'block');
+ let poll=timers.find(t=>t.ms===15000);response={slides:[{id:3,kind:'video',media:'/media/movie/',video_mode:'fixed',duration:8}]};await poll.f();assert.equal(video.loop,true);assert(timers.some(t=>t.ms===8000));
+ response={slides:[]};await timers.filter(t=>t.ms===15000).at(-1).f();assert.equal(empty.hidden,false);assert.equal(frame.srcdoc,'');assert.equal(video.onended,null);
+ console.log('PASS: background, escaping, local media CSP, full-video end, fixed-video loop, live empty playlist');})().catch(e=>{console.error(e);process.exit(1)});

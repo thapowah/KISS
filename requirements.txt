@@ -1,4 +1,6 @@
-Django==1.6.5
-argparse==1.2.1
-django-wysiwyg==0.7.0
-wsgiref==0.1.2
+asgiref==3.12.1
+Django==5.2.18
+gunicorn==26.2.0
+sqlparse==0.6.0
+whitenoise==6.12.0
+Pillow==12.3.0
